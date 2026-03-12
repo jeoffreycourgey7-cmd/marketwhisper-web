@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../lib/supabase";
 
-const categories = ["Tous", "Politique", "Économie", "Crypto", "Tech", "Géopolitique", "Autre"];
+const categories = ["Tendances", "Politique", "Économie", "Crypto", "Tech", "Géopolitique", "Sport", "Autre"];
 
 const style = `
   @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500&display=swap');
@@ -77,8 +77,11 @@ const style = `
 
 export default function MarketWhisper() {
   const [page, setPage] = useState("home");
-  const [filter, setFilter] = useState("Tous");
-  const [showModal, setShowModal] = useState(false);
+  const [filter, setFilter] = useState("Tendances");
+const [showModal, setShowModal] = useState(false);
+const [visibleCount, setVisibleCount] = useState(15);
+const [sortBy, setSortBy] = useState("volume");
+const [searchQuery, setSearchQuery] = useState("");
   const [selectedPlan, setSelectedPlan] = useState("monthly");
   const [markets, setMarkets] = useState([]);
   const [predictions, setPredictions] = useState([]);
@@ -100,7 +103,23 @@ export default function MarketWhisper() {
     fetchData();
   }, []);
 
-  const filtered = filter === "Tous" ? markets : markets.filter(m => m.category === filter);
+ const filtered = filter === "Tendances" 
+  ? [...markets].sort((a, b) => b.volume - a.volume)
+  : markets.filter(m => m.category === filter);
+const searched = searchQuery 
+  ? filtered.filter(m => m.title?.toLowerCase().includes(searchQuery.toLowerCase()))
+  : filtered;
+
+const sorted = [...searched].sort((a, b) => {
+  if (sortBy === "volume_desc") return b.volume - a.volume;
+  if (sortBy === "volume_asc") return a.volume - b.volume;
+  if (sortBy === "change_up") return b.change_24h - a.change_24h;
+  if (sortBy === "change_down") return a.change_24h - b.change_24h;
+  if (sortBy === "end_date") return new Date(a.end_date) - new Date(b.end_date);
+  return b.volume - a.volume;
+});
+
+const visibleMarkets = sorted.slice(0, visibleCount);
 
   const formatVolume = (v) => {
     if (!v) return "0";
@@ -265,7 +284,45 @@ export default function MarketWhisper() {
               <div className="section-title">Marchés en vedette</div>
               <div className="section-count">{markets.length} marchés actifs</div>
             </div>
-            <div className="filters">
+            {/* BARRE DE RECHERCHE */}
+<div style={{ marginBottom: "1rem", position: "relative" }}>
+  <input
+    type="text"
+    placeholder="🔍 Rechercher un marché..."
+    value={searchQuery}
+    onChange={e => { setSearchQuery(e.target.value); setVisibleCount(15); }}
+    style={{ width: "100%", background: "var(--surface)", border: "1px solid var(--border)", color: "var(--text)", padding: "0.7rem 1rem", fontFamily: "'DM Mono', monospace", fontSize: "0.8rem", outline: "none" }}
+  />
+</div>
+
+{/* FILTRES TRI */}
+<div style={{ position: "relative", marginBottom: "1rem", display: "inline-block" }}>
+  <button className="btn-outline" style={{ fontSize: "0.75rem", padding: "0.5rem 1rem", display: "flex", alignItems: "center", gap: "0.5rem" }} onClick={() => setSortBy(sortBy === "open" ? "volume_desc" : "open")}>
+    Filtrer {sortBy !== "volume_desc" && sortBy !== "open" ? "✦" : "▼"}
+  </button>
+  {sortBy === "open" && (
+    <div style={{ position: "absolute", top: "110%", left: 0, background: "var(--surface)", border: "1px solid var(--border)", zIndex: 50, minWidth: "220px" }}>
+      {[
+        { id: "volume_desc", label: "🔥 Plus gros volume" },
+        { id: "change_up", label: "📈 Plus forte hausse" },
+        { id: "change_down", label: "📉 Plus forte baisse" },
+        { id: "volume_asc", label: "💎 Marchés émergents" },
+        { id: "end_date", label: "⏰ Se termine bientôt" },
+      ].map(s => (
+        <div key={s.id} onClick={() => { setSortBy(s.id); setVisibleCount(15); }} style={{ padding: "0.7rem 1rem", fontSize: "0.8rem", cursor: "pointer", borderBottom: "1px solid var(--border)", color: "var(--text)" }}
+          onMouseEnter={e => e.target.style.background = "var(--surface2)"}
+          onMouseLeave={e => e.target.style.background = "transparent"}>
+          {s.label}
+        </div>
+      ))}
+      <div onClick={() => { setSortBy("volume_desc"); setVisibleCount(15); }} style={{ padding: "0.7rem 1rem", fontSize: "0.75rem", cursor: "pointer", color: "var(--muted)", textAlign: "center" }}>
+        Réinitialiser
+      </div>
+    </div>
+  )}
+</div>
+
+<div className="filters">
               {categories.map(c => (
                 <button key={c} className={`filter-btn ${filter === c ? "active" : ""}`} onClick={() => setFilter(c)}>{c}</button>
               ))}
@@ -273,7 +330,7 @@ export default function MarketWhisper() {
 
             {loading ? <div className="loading">CHARGEMENT DES MARCHÉS...</div> : (
               <div className="markets-grid">
-                {filtered.map(m => (
+            {visibleMarkets.map(m => (
                   <div key={m.id} className={`market-card ${m.is_hot ? "hot" : ""}`}>
                     <div className="market-cat">{m.category}</div>
                     <div className="market-title">{m.title}</div>
@@ -288,6 +345,13 @@ export default function MarketWhisper() {
                     </div>
                   </div>
                 ))}
+              </div>
+            )}
+            {visibleCount < filtered.length && (
+              <div style={{ textAlign: "center", marginTop: "2rem" }}>
+                <button className="btn-outline" style={{ padding: "0.8rem 2rem", fontSize: "0.8rem" }} onClick={() => setVisibleCount(v => v + 15)}>
+                  Show more — {filtered.length - visibleCount} marchés restants
+                </button>
               </div>
             )}
           </>
