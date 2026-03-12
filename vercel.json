@@ -1,0 +1,12 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/fetch-markets",
+      "schedule": "*/15 * * * *"
+    },
+    {
+      "path": "/api/cron/ai-brain",
+      "schedule": "0 * * * *"
+    }
+  ]
+}
