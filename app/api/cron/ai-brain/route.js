@@ -56,7 +56,7 @@ export async function GET(request) {
   try {
     const authHeader = request.headers.get("authorization");
     if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-      return Response.json({ error: "Unauthorized" }, { status: 401 });
+      return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { 'Content-Type': 'application/json' } });
     }
 
     const { data: markets, error } = await supabase
@@ -95,8 +95,8 @@ export async function GET(request) {
       }
     }
 
-    return Response.json({ success: true, opportunities });
+    return new Response(JSON.stringify({ success: true, opportunities }), { status: 200, headers: { 'Content-Type': 'application/json' } });
   } catch (err) {
-    return Response.json({ error: err.message }, { status: 500 });
+    return new Response(JSON.stringify({ error: err.message }), { status: 500, headers: { 'Content-Type': 'application/json' } });
   }
 }
