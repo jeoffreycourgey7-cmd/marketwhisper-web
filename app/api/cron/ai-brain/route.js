@@ -64,8 +64,7 @@ export async function GET(request) {
       .select("*")
       .gt("yes_probability", 5)
       .lt("yes_probability", 95)
-      .gte("end_date", new Date().toISOString())
-      .lte("end_date", new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString())
+ .or(`end_date.gte.${new Date().toISOString()},end_date.is.null`)
       .order("volume", { ascending: false })
       .limit(20);
 
