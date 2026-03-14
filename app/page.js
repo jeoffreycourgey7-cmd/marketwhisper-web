@@ -86,8 +86,15 @@ const [searchQuery, setSearchQuery] = useState("");
   const [markets, setMarkets] = useState([]);
   const [predictions, setPredictions] = useState([]);
   const [loading, setLoading] = useState(true);
+const [user, setUser] = useState(null);
 
-  useEffect(() => {
+useEffect(() => {
+    async function getUser() {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) setUser(session.user);
+    }
+    getUser();
+
     async function fetchData() {
       setLoading(true);
       const [{ data: m }, { data: p }] = await Promise.all([
@@ -189,7 +196,11 @@ const visibleMarkets = sorted.slice(0, visibleCount);
           ))}
         </ul>
         <div className="nav-right">
-          <button className="btn-outline">Connexion</button>
+       {user ? (
+  <button className="btn-outline" onClick={async () => { await supabase.auth.signOut(); setUser(null); }}>Déconnexion</button>
+) : (
+  <button className="btn-outline" onClick={() => window.location.href = "/login"}>Connexion</button>
+)}
           <button className="btn-premium" onClick={() => setShowModal(true)}>✦ Premium</button>
         </div>
       </nav>
